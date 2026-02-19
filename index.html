@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業單字練習 PWA (含錯誤庫)</title>
+    <title>專業單字練習 PWA (L8-L15)</title>
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
@@ -28,12 +28,12 @@
         .hidden { display: none; }
         
         /* 答題區樣式 */
-        .word-box { font-size: 32px; text-align: center; padding: 30px 10px; background: var(--light); border-radius: 10px; margin-bottom: 20px; color: var(--primary); min-height: 50px; position: relative; }
+        .word-box { font-size: 28px; text-align: center; padding: 30px 10px; background: var(--light); border-radius: 10px; margin-bottom: 20px; color: var(--primary); min-height: 50px; position: relative; word-break: break-word; }
         .badge { position: absolute; top: 10px; right: 10px; background: var(--danger); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
         
         /* 選項按鈕 */
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .option-btn { background: white; color: var(--primary); border: 2px solid var(--accent); margin-top: 0; }
+        .option-btn { background: white; color: var(--primary); border: 2px solid var(--accent); margin-top: 0; min-height: 50px; display: flex; align-items: center; justify-content: center; }
         .option-btn:hover { background: var(--accent); color: white; }
         
         #feedback { text-align: center; font-weight: bold; margin-top: 15px; min-height: 24px; font-size: 18px; }
@@ -48,14 +48,13 @@
 
 <div class="card">
     <div id="menu-screen">
-        <h1>單字練習系統 3.0</h1>
+        <h1>單字練習系統 (Lesson 8-15)</h1>
         
         <label>選擇範圍:</label>
         <select id="lesson-select" onchange="checkErrorMode()">
             <option value="error" style="color:red; font-weight:bold;">❌ 錯誤單字庫 (複習)</option>
             <option disabled>──────────</option>
-            <script>for(let i=1;i<=10;i++) document.write(`<option value="${i}" ${i===1?'selected':''}>第 ${i} 課</option>`);</script>
-        </select>
+            </select>
 
         <label>測驗模式:</label>
         <select id="mode-select">
@@ -136,22 +135,55 @@
 </div>
 
 <script>
-    // === 資料庫設定 ===
+    // === 更新後的資料庫 (Lesson 8-15) ===
     const vocabDB = {
-        1: [{e:"apple", c:"蘋果"}, {e:"banana", c:"香蕉"}, {e:"cherry", c:"櫻桃"}, {e:"date", c:"椰棗"}],
-        2: [{e:"engineer", c:"工程師"}, {e:"plant", c:"工廠"}, {e:"safety", c:"安全"}, {e:"valve", c:"閥門"}],
-        3: [{e:"pump", c:"幫浦"}, {e:"pipe", c:"管線"}, {e:"tank", c:"儲槽"}, {e:"oil", c:"石油"}],
-        4: [{e:"gas", c:"氣體"}, {e:"liquid", c:"液體"}, {e:"solid", c:"固體"}, {e:"steam", c:"蒸汽"}],
-        5: [{e:"heat", c:"熱"}, {e:"cool", c:"冷"}, {e:"pressure", c:"壓力"}, {e:"level", c:"液位"}],
-        6: [{e:"flow", c:"流量"}, {e:"meter", c:"儀表"}, {e:"sensor", c:"感測器"}, {e:"alarm", c:"警報"}],
-        7: [{e:"acid", c:"酸"}, {e:"base", c:"鹼"}, {e:"reaction", c:"反應"}, {e:"mix", c:"混合"}],
-        8: [{e:"inspect", c:"檢查"}, {e:"maintain", c:"維護"}, {e:"repair", c:"修理"}, {e:"test", c:"測試"}],
-        9: [{e:"hazard", c:"危害"}, {e:"risk", c:"風險"}, {e:"helmet", c:"安全帽"}, {e:"glove", c:"手套"}],
-        10: [{e:"report", c:"報告"}, {e:"plan", c:"計畫"}, {e:"system", c:"系統"}, {e:"control", c:"控制"}]
+        8: [
+            {e:"January", c:"一月"}, {e:"February", c:"二月"}, {e:"March", c:"三月"},
+            {e:"April", c:"四月"}, {e:"May", c:"五月"}, {e:"June", c:"六月"}
+        ],
+        9: [
+            {e:"July", c:"七月"}, {e:"August", c:"八月"}, {e:"September", c:"九月"},
+            {e:"October", c:"十月"}, {e:"November", c:"十一月"}, {e:"December", c:"十二月"}
+        ],
+        10: [
+            {e:"spring", c:"春天"}, {e:"summer", c:"夏天"}, {e:"fall", c:"秋天"}, {e:"winter", c:"冬天"}
+        ],
+        12: [
+            {e:"tomorrow morning", c:"明天早晨"}, {e:"tomorrow afternoon", c:"明天下午"},
+            {e:"tomorrow night", c:"明天晚上"}, {e:"the day after tomorrow", c:"後天"}
+        ],
+        13: [
+            {e:"listen to music", c:"聽音樂"}, {e:"go to the beach", c:"去海邊"},
+            {e:"visit friends", c:"拜訪朋友"}, {e:"buy some new clothes", c:"買一些新衣服"}
+        ],
+        14: [
+            {e:"borrow a book", c:"借一本書"}, {e:"mail a letter", c:"寄一封信"},
+            {e:"see the doctor", c:"看醫生"}, // 照片註記：看醫生；看病
+            {e:"buy chocolate cookies", c:"買巧克力餅乾"}
+        ],
+        15: [
+            {e:"steak", c:"牛排"}, {e:"pork chops", c:"豬排"},
+            {e:"seafood", c:"海鮮"}, {e:"salad", c:"沙拉"}
+        ]
+    };
+    
+    // 定義多重答案 (處理：看醫生/看病)
+    const altAnswers = {
+        "see the doctor": ["看病"]
     };
 
-    let state = { type: '', mode: '', lesson: 1, list: [], index: 0, score: 0 };
+    let state = { type: '', mode: '', lesson: 8, list: [], index: 0, score: 0 };
     let errorDB = JSON.parse(localStorage.getItem('error_db') || '[]');
+
+    // 初始化選單
+    const lessonSelect = document.getElementById('lesson-select');
+    Object.keys(vocabDB).forEach(lesson => {
+        const opt = document.createElement('option');
+        opt.value = lesson;
+        opt.innerText = `Lesson ${lesson}`;
+        if (lesson === '8') opt.selected = true; // 預設選取第8課
+        lessonSelect.appendChild(opt);
+    });
 
     // === 核心功能 ===
 
@@ -164,7 +196,7 @@
         if (lessonVal === 'error') {
             if (errorDB.length === 0) return alert("錯誤單字庫目前是空的，真棒！");
             state.lesson = 'error';
-            state.list = [...errorDB].sort(() => Math.random() - 0.5); // 隨機排序
+            state.list = [...errorDB].sort(() => Math.random() - 0.5);
         } else {
             state.lesson = lessonVal;
             state.list = [...vocabDB[state.lesson]].sort(() => Math.random() - 0.5);
@@ -209,7 +241,6 @@
         } else {
             document.getElementById('input-area').classList.remove('hidden');
             document.getElementById('user-answer').value = '';
-            // 聚焦輸入框
             setTimeout(() => document.getElementById('user-answer').focus(), 100);
 
             if (state.mode === 'audio-en-input') {
@@ -227,10 +258,8 @@
         document.getElementById('display-word').innerText = isEnToCh ? word.e : word.c;
         const correctAns = isEnToCh ? word.c : word.e;
         
-        // 產生干擾項
         let allWords = [];
         if(state.lesson === 'error') {
-            // 如果是錯誤庫模式，從所有課程抓干擾項
             allWords = Object.values(vocabDB).flat();
         } else {
             allWords = Object.values(vocabDB).flat(); 
@@ -239,11 +268,16 @@
         let distractors = allWords
             .map(w => isEnToCh ? w.c : w.e)
             .filter(ans => ans !== correctAns);
+        
+        // 移除重複並隨機選3個
         distractors = [...new Set(distractors)].sort(() => 0.5 - Math.random()).slice(0, 3);
         
         const choices = [correctAns, ...distractors].sort(() => 0.5 - Math.random());
         const container = document.getElementById('options-container');
-        container.innerHTML = choices.map(c => `<button class="option-btn" onclick="checkChoice('${c}', '${correctAns.replace(/'/g, "\\'")}')">${c}</button>`).join('');
+        // 處理引號跳脫問題
+        container.innerHTML = choices.map(c => 
+            `<button class="option-btn" onclick="checkChoice('${c.replace(/'/g, "\\'")}', '${correctAns.replace(/'/g, "\\'")}')">${c}</button>`
+        ).join('');
     }
 
     // === 檢查答案與錯誤庫邏輯 ===
@@ -256,7 +290,17 @@
         const userAns = document.getElementById('user-answer').value.trim().toLowerCase();
         const word = state.list[state.index];
         const correct = state.mode.includes('en-ch') ? word.c : word.e;
-        processResult(userAns === correct.toLowerCase(), correct);
+        
+        let isCorrect = (userAns === correct.toLowerCase());
+
+        // 檢查替代答案 (例如: 看病)
+        if (!isCorrect && state.mode === 'en-ch' && altAnswers[word.e]) {
+            if (altAnswers[word.e].some(ans => ans === userAns)) {
+                isCorrect = true;
+            }
+        }
+
+        processResult(isCorrect, correct);
     }
 
     function processResult(isCorrect, correctVal) {
@@ -266,14 +310,12 @@
         if (isCorrect) {
             state.score++;
             if (state.lesson === 'error') {
-                // 錯誤庫模式：答對 = 消除
                 removeFromErrorDB(currentWord);
                 feedback.innerHTML = `<span style="color:var(--success)">✅ 答對了！已從錯誤庫移除！</span>`;
             } else {
                 feedback.innerHTML = `<span style="color:var(--success)">✅ Correct!</span>`;
             }
         } else {
-            // 答錯：加入錯誤庫
             addToErrorDB(currentWord);
             feedback.innerHTML = `<span style="color:var(--danger)">❌ 錯誤！答案是: ${correctVal} <br><small>(已加入錯誤庫)</small></span>`;
         }
@@ -291,7 +333,6 @@
     // === 錯誤庫管理函數 ===
 
     function addToErrorDB(word) {
-        // 避免重複加入
         const exists = errorDB.some(w => w.e === word.e);
         if (!exists) {
             errorDB.push(word);
@@ -311,7 +352,7 @@
         
         if (val === 'error') {
             practiceBtn.innerText = "開始錯誤特訓 (答對即消除)";
-            examBtn.style.display = 'none'; // 錯誤庫不建議用考試模式，因為邏輯不同
+            examBtn.style.display = 'none';
         } else {
             practiceBtn.innerText = "開始練習 (不計分)";
             examBtn.style.display = 'block';
@@ -405,7 +446,7 @@
     function showHistory() {
         const history = JSON.parse(localStorage.getItem('vocab_history') || '[]');
         document.getElementById('history-list').innerHTML = history.reverse()
-            .map(h => `<tr><td>${h.time}</td><td>第 ${h.lesson} 課</td><td>${h.score}</td></tr>`).join('');
+            .map(h => `<tr><td>${h.time}</td><td>Lesson ${h.lesson}</td><td>${h.score}</td></tr>`).join('');
         document.getElementById('menu-screen').classList.add('hidden');
         document.getElementById('history-screen').classList.remove('hidden');
     }
@@ -415,10 +456,9 @@
         document.getElementById('history-screen').classList.add('hidden');
         document.getElementById('error-screen').classList.add('hidden');
         document.getElementById('menu-screen').classList.remove('hidden');
-        checkErrorMode(); // 重置按鈕狀態
+        checkErrorMode(); 
     }
 
-    // 鍵盤支援
     document.getElementById('user-answer').addEventListener('keypress', (e) => {
         if(e.key === 'Enter') checkAnswer();
     });
