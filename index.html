@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>專業單字練習 PWA (L8-L15)</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.jpg">
     <style>
         :root {
             --primary: #2c3e50;
@@ -24,7 +25,6 @@
         .btn-test { background: var(--success); }
         .btn-error { background: var(--danger); }
         .btn-secondary { background: #95a5a6; }
-        .btn-small { padding: 5px 10px; font-size: 14px; width: auto; margin: 0; }
         .hidden { display: none; }
         
         /* 答題區樣式 */
@@ -135,7 +135,7 @@
 </div>
 
 <script>
-    // === 更新後的資料庫 (Lesson 8-15) ===
+    // === 資料庫 (Lesson 8-15) ===
     const vocabDB = {
         8: [
             {e:"January", c:"一月"}, {e:"February", c:"二月"}, {e:"March", c:"三月"},
@@ -158,7 +158,7 @@
         ],
         14: [
             {e:"borrow a book", c:"借一本書"}, {e:"mail a letter", c:"寄一封信"},
-            {e:"see the doctor", c:"看醫生"}, // 照片註記：看醫生；看病
+            {e:"see the doctor", c:"看醫生"},
             {e:"buy chocolate cookies", c:"買巧克力餅乾"}
         ],
         15: [
@@ -269,18 +269,14 @@
             .map(w => isEnToCh ? w.c : w.e)
             .filter(ans => ans !== correctAns);
         
-        // 移除重複並隨機選3個
         distractors = [...new Set(distractors)].sort(() => 0.5 - Math.random()).slice(0, 3);
         
         const choices = [correctAns, ...distractors].sort(() => 0.5 - Math.random());
         const container = document.getElementById('options-container');
-        // 處理引號跳脫問題
         container.innerHTML = choices.map(c => 
             `<button class="option-btn" onclick="checkChoice('${c.replace(/'/g, "\\'")}', '${correctAns.replace(/'/g, "\\'")}')">${c}</button>`
         ).join('');
     }
-
-    // === 檢查答案與錯誤庫邏輯 ===
 
     function checkChoice(picked, correct) {
         processResult(picked.toLowerCase() === correct.toLowerCase(), correct);
@@ -293,7 +289,7 @@
         
         let isCorrect = (userAns === correct.toLowerCase());
 
-        // 檢查替代答案 (例如: 看病)
+        // 檢查替代答案
         if (!isCorrect && state.mode === 'en-ch' && altAnswers[word.e]) {
             if (altAnswers[word.e].some(ans => ans === userAns)) {
                 isCorrect = true;
@@ -329,8 +325,6 @@
             }
         }, 1500);
     }
-
-    // === 錯誤庫管理函數 ===
 
     function addToErrorDB(word) {
         const exists = errorDB.some(w => w.e === word.e);
@@ -394,8 +388,6 @@
             renderErrorList();
         }
     }
-
-    // === 輔助功能 ===
 
     function startSpeechRecognition() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

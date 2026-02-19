@@ -1,15 +1,20 @@
 {
-  "name": "Vocab Master PWA",
-  "short_name": "Vocab",
+  "name": "單字練習 App",
+  "short_name": "單字練習",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#f4f7f6",
+  "background_color": "#f0f2f5",
   "theme_color": "#2c3e50",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192",
+      "src": "icon.jpg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/jpeg"
+    },
+    {
+      "src": "icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
     }
   ]
 }
