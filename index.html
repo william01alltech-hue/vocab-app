@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專業單字練習 PWA (含錯誤庫)</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #f8f9fa;
+        }
+        body { font-family: 'Microsoft JhengHei', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; width: 100%; max-width: 550px; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; }
+        h1 { text-align: center; color: var(--primary); font-size: 24px; margin-bottom: 20px; }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        select, input, button { width: 100%; padding: 12px; margin-top: 5px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; font-size: 16px; }
+        button { background: var(--accent); color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-test { background: var(--success); }
+        .btn-error { background: var(--danger); }
+        .btn-secondary { background: #95a5a6; }
+        .btn-small { padding: 5px 10px; font-size: 14px; width: auto; margin: 0; }
+        .hidden { display: none; }
+        
+        /* 答題區樣式 */
+        .word-box { font-size: 32px; text-align: center; padding: 30px 10px; background: var(--light); border-radius: 10px; margin-bottom: 20px; color: var(--primary); min-height: 50px; position: relative; }
+        .badge { position: absolute; top: 10px; right: 10px; background: var(--danger); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        
+        /* 選項按鈕 */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .option-btn { background: white; color: var(--primary); border: 2px solid var(--accent); margin-top: 0; }
+        .option-btn:hover { background: var(--accent); color: white; }
+        
+        #feedback { text-align: center; font-weight: bold; margin-top: 15px; min-height: 24px; font-size: 18px; }
+        
+        /* 列表樣式 */
+        .list-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .list-table th, .list-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        .delete-btn { background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div id="menu-screen">
+        <h1>單字練習系統 3.0</h1>
+        
+        <label>選擇範圍:</label>
+        <select id="lesson-select" onchange="checkErrorMode()">
+            <option value="error" style="color:red; font-weight:bold;">❌ 錯誤單字庫 (複習)</option>
+            <option disabled>──────────</option>
+            <script>for(let i=1;i<=10;i++) document.write(`<option value="${i}" ${i===1?'selected':''}>第 ${i} 課</option>`);</script>
+        </select>
+
+        <label>測驗模式:</label>
+        <select id="mode-select">
+            <optgroup label="看英文 ➔ 答中文">
+                <option value="en-ch-choice">選擇題版</option>
+                <option value="en-ch-input">填字版</option>
+            </optgroup>
+            <optgroup label="看中文 ➔ 答英文">
+                <option value="ch-en-choice">選擇題版</option>
+                <option value="ch-en-input">填字版</option>
+            </optgroup>
+            <optgroup label="發音練習">
+                <option value="audio-en-input">聽發音 ➔ 答英文 (填字)</option>
+                <option value="en-speech">看單字 ➔ 讀發音 (語音辨識)</option>
+            </optgroup>
+        </select>
+
+        <button onclick="startApp('practice')" id="btn-practice">開始練習 (不計分)</button>
+        <button class="btn-test" onclick="startApp('test')" id="btn-exam">開始考試 (計分)</button>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <button class="btn-error" onclick="manageErrors()">管理錯誤庫</button>
+            <button class="btn-secondary" onclick="showHistory()">查看紀錄</button>
+        </div>
+    </div>
+
+    <div id="quiz-screen" class="hidden">
+        <div style="display:flex; justify-content: space-between; margin-bottom: 10px;">
+            <span id="q-progress"></span>
+            <span id="q-status"></span>
+        </div>
+        <div class="word-box">
+            <span id="display-word"></span>
+            <span id="error-badge" class="badge hidden">錯誤庫</span>
+        </div>
+        
+        <div id="input-area" class="hidden">
+            <input type="text" id="user-answer" placeholder="請輸入答案" autocomplete="off">
+            <button onclick="checkAnswer()">送出答案</button>
+        </div>
+
+        <div id="choice-area" class="hidden" class="options-grid">
+            <div class="options-grid" id="options-container"></div>
+        </div>
+
+        <div id="speech-area" class="hidden">
+            <button id="mic-btn" style="background:#e67e22" onclick="startSpeechRecognition()">🎤 點擊開始讀音</button>
+            <p style="text-align:center; color:#7f8c8d; font-size:14px;">(需使用 Chrome)</p>
+        </div>
+
+        <button id="audio-btn" class="btn-secondary hidden" onclick="playCurrentWord()">🔊 播放發音</button>
+        <button class="btn-secondary" onclick="goHome()">暫停 / 返回</button>
+        <div id="feedback"></div>
+    </div>
+
+    <div id="history-screen" class="hidden">
+        <h2>考試歷史紀錄</h2>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table class="list-table">
+                <thead><tr><th>時間</th><th>課次</th><th>得分</th></tr></thead>
+                <tbody id="history-list"></tbody>
+            </table>
+        </div>
+        <button class="btn-secondary" onclick="goHome()">返回</button>
+    </div>
+
+    <div id="error-screen" class="hidden">
+        <h2>錯誤單字庫管理</h2>
+        <p style="text-align:center; color:#666; font-size:14px;">(共 <span id="error-count">0</span> 個單字)</p>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table class="list-table">
+                <thead><tr><th>英文</th><th>中文</th><th>操作</th></tr></thead>
+                <tbody id="error-list-body"></tbody>
+            </table>
+        </div>
+        <button class="btn-secondary" onclick="goHome()">返回主選單</button>
+    </div>
+</div>
+
+<script>
+    // === 資料庫設定 ===
+    const vocabDB = {
+        1: [{e:"apple", c:"蘋果"}, {e:"banana", c:"香蕉"}, {e:"cherry", c:"櫻桃"}, {e:"date", c:"椰棗"}],
+        2: [{e:"engineer", c:"工程師"}, {e:"plant", c:"工廠"}, {e:"safety", c:"安全"}, {e:"valve", c:"閥門"}],
+        3: [{e:"pump", c:"幫浦"}, {e:"pipe", c:"管線"}, {e:"tank", c:"儲槽"}, {e:"oil", c:"石油"}],
+        4: [{e:"gas", c:"氣體"}, {e:"liquid", c:"液體"}, {e:"solid", c:"固體"}, {e:"steam", c:"蒸汽"}],
+        5: [{e:"heat", c:"熱"}, {e:"cool", c:"冷"}, {e:"pressure", c:"壓力"}, {e:"level", c:"液位"}],
+        6: [{e:"flow", c:"流量"}, {e:"meter", c:"儀表"}, {e:"sensor", c:"感測器"}, {e:"alarm", c:"警報"}],
+        7: [{e:"acid", c:"酸"}, {e:"base", c:"鹼"}, {e:"reaction", c:"反應"}, {e:"mix", c:"混合"}],
+        8: [{e:"inspect", c:"檢查"}, {e:"maintain", c:"維護"}, {e:"repair", c:"修理"}, {e:"test", c:"測試"}],
+        9: [{e:"hazard", c:"危害"}, {e:"risk", c:"風險"}, {e:"helmet", c:"安全帽"}, {e:"glove", c:"手套"}],
+        10: [{e:"report", c:"報告"}, {e:"plan", c:"計畫"}, {e:"system", c:"系統"}, {e:"control", c:"控制"}]
+    };
+
+    let state = { type: '', mode: '', lesson: 1, list: [], index: 0, score: 0 };
+    let errorDB = JSON.parse(localStorage.getItem('error_db') || '[]');
+
+    // === 核心功能 ===
+
+    function startApp(type) {
+        state.type = type;
+        const lessonVal = document.getElementById('lesson-select').value;
+        state.mode = document.getElementById('mode-select').value;
+
+        // 判斷是否為錯誤庫模式
+        if (lessonVal === 'error') {
+            if (errorDB.length === 0) return alert("錯誤單字庫目前是空的，真棒！");
+            state.lesson = 'error';
+            state.list = [...errorDB].sort(() => Math.random() - 0.5); // 隨機排序
+        } else {
+            state.lesson = lessonVal;
+            state.list = [...vocabDB[state.lesson]].sort(() => Math.random() - 0.5);
+        }
+
+        state.index = 0; 
+        state.score = 0;
+
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const word = state.list[state.index];
+        const display = document.getElementById('display-word');
+        const feedback = document.getElementById('feedback');
+        const badge = document.getElementById('error-badge');
+        
+        feedback.innerText = '';
+        document.getElementById('q-progress').innerText = `進度: ${state.index + 1}/${state.list.length}`;
+        
+        // 狀態顯示
+        if (state.lesson === 'error') {
+            document.getElementById('q-status').innerText = '🔥 錯誤庫特訓';
+            badge.classList.remove('hidden');
+        } else {
+            document.getElementById('q-status').innerText = state.type === 'test' ? `得分: ${state.score}` : '練習中';
+            badge.classList.add('hidden');
+        }
+
+        // UI 初始化
+        ['input-area', 'choice-area', 'speech-area', 'audio-btn'].forEach(id => document.getElementById(id).classList.add('hidden'));
+
+        // 根據模式顯示介面
+        if (state.mode.includes('choice')) {
+            document.getElementById('choice-area').classList.remove('hidden');
+            setupChoices(word);
+        } else if (state.mode === 'en-speech') {
+            document.getElementById('speech-area').classList.remove('hidden');
+            display.innerText = word.e;
+        } else {
+            document.getElementById('input-area').classList.remove('hidden');
+            document.getElementById('user-answer').value = '';
+            // 聚焦輸入框
+            setTimeout(() => document.getElementById('user-answer').focus(), 100);
+
+            if (state.mode === 'audio-en-input') {
+                display.innerText = '???';
+                document.getElementById('audio-btn').classList.remove('hidden');
+                playCurrentWord();
+            } else {
+                display.innerText = state.mode.startsWith('en') ? word.e : word.c;
+            }
+        }
+    }
+
+    function setupChoices(word) {
+        const isEnToCh = state.mode.startsWith('en');
+        document.getElementById('display-word').innerText = isEnToCh ? word.e : word.c;
+        const correctAns = isEnToCh ? word.c : word.e;
+        
+        // 產生干擾項
+        let allWords = [];
+        if(state.lesson === 'error') {
+            // 如果是錯誤庫模式，從所有課程抓干擾項
+            allWords = Object.values(vocabDB).flat();
+        } else {
+            allWords = Object.values(vocabDB).flat(); 
+        }
+        
+        let distractors = allWords
+            .map(w => isEnToCh ? w.c : w.e)
+            .filter(ans => ans !== correctAns);
+        distractors = [...new Set(distractors)].sort(() => 0.5 - Math.random()).slice(0, 3);
+        
+        const choices = [correctAns, ...distractors].sort(() => 0.5 - Math.random());
+        const container = document.getElementById('options-container');
+        container.innerHTML = choices.map(c => `<button class="option-btn" onclick="checkChoice('${c}', '${correctAns.replace(/'/g, "\\'")}')">${c}</button>`).join('');
+    }
+
+    // === 檢查答案與錯誤庫邏輯 ===
+
+    function checkChoice(picked, correct) {
+        processResult(picked.toLowerCase() === correct.toLowerCase(), correct);
+    }
+
+    function checkAnswer() {
+        const userAns = document.getElementById('user-answer').value.trim().toLowerCase();
+        const word = state.list[state.index];
+        const correct = state.mode.includes('en-ch') ? word.c : word.e;
+        processResult(userAns === correct.toLowerCase(), correct);
+    }
+
+    function processResult(isCorrect, correctVal) {
+        const feedback = document.getElementById('feedback');
+        const currentWord = state.list[state.index];
+
+        if (isCorrect) {
+            state.score++;
+            if (state.lesson === 'error') {
+                // 錯誤庫模式：答對 = 消除
+                removeFromErrorDB(currentWord);
+                feedback.innerHTML = `<span style="color:var(--success)">✅ 答對了！已從錯誤庫移除！</span>`;
+            } else {
+                feedback.innerHTML = `<span style="color:var(--success)">✅ Correct!</span>`;
+            }
+        } else {
+            // 答錯：加入錯誤庫
+            addToErrorDB(currentWord);
+            feedback.innerHTML = `<span style="color:var(--danger)">❌ 錯誤！答案是: ${correctVal} <br><small>(已加入錯誤庫)</small></span>`;
+        }
+
+        setTimeout(() => {
+            state.index++;
+            if (state.index < state.list.length) {
+                renderQuestion();
+            } else {
+                finishQuiz();
+            }
+        }, 1500);
+    }
+
+    // === 錯誤庫管理函數 ===
+
+    function addToErrorDB(word) {
+        // 避免重複加入
+        const exists = errorDB.some(w => w.e === word.e);
+        if (!exists) {
+            errorDB.push(word);
+            localStorage.setItem('error_db', JSON.stringify(errorDB));
+        }
+    }
+
+    function removeFromErrorDB(word) {
+        errorDB = errorDB.filter(w => w.e !== word.e);
+        localStorage.setItem('error_db', JSON.stringify(errorDB));
+    }
+
+    function checkErrorMode() {
+        const val = document.getElementById('lesson-select').value;
+        const practiceBtn = document.getElementById('btn-practice');
+        const examBtn = document.getElementById('btn-exam');
+        
+        if (val === 'error') {
+            practiceBtn.innerText = "開始錯誤特訓 (答對即消除)";
+            examBtn.style.display = 'none'; // 錯誤庫不建議用考試模式，因為邏輯不同
+        } else {
+            practiceBtn.innerText = "開始練習 (不計分)";
+            examBtn.style.display = 'block';
+            examBtn.innerText = "開始考試 (計分)";
+        }
+    }
+
+    function manageErrors() {
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('error-screen').classList.remove('hidden');
+        renderErrorList();
+    }
+
+    function renderErrorList() {
+        const listBody = document.getElementById('error-list-body');
+        document.getElementById('error-count').innerText = errorDB.length;
+        listBody.innerHTML = '';
+        
+        if (errorDB.length === 0) {
+            listBody.innerHTML = '<tr><td colspan="3">目前沒有錯誤單字，太棒了！</td></tr>';
+            return;
+        }
+
+        errorDB.forEach((word, index) => {
+            listBody.innerHTML += `
+                <tr>
+                    <td>${word.e}</td>
+                    <td>${word.c}</td>
+                    <td><button class="delete-btn" onclick="manualDeleteError(${index})">刪除</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    function manualDeleteError(index) {
+        if(confirm('確定要移除這個單字嗎？')) {
+            errorDB.splice(index, 1);
+            localStorage.setItem('error_db', JSON.stringify(errorDB));
+            renderErrorList();
+        }
+    }
+
+    // === 輔助功能 ===
+
+    function startSpeechRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return alert("您的瀏覽器不支援語音辨識 (iOS請用Safari, Android請用Chrome)");
+        
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        const btn = document.getElementById('mic-btn');
+        btn.innerText = "🔴 聆聽中...";
+        
+        recognition.onresult = (event) => {
+            const result = event.results[0][0].transcript.toLowerCase();
+            const correct = state.list[state.index].e.toLowerCase();
+            btn.innerText = "🎤 點擊開始讀音";
+            processResult(result === correct, correct);
+        };
+        recognition.onerror = () => {
+            btn.innerText = "🎤 點擊開始讀音";
+            alert("辨識失敗，請重試");
+        };
+        recognition.start();
+    }
+
+    function playCurrentWord() {
+        const msg = new SpeechSynthesisUtterance(state.list[state.index].e);
+        msg.lang = 'en-US'; window.speechSynthesis.speak(msg);
+    }
+
+    function finishQuiz() {
+        if (state.lesson === 'error') {
+            alert("錯誤單字複習完成！答對的單字已從庫中移除。");
+        } else if (state.type === 'test') {
+            const finalScore = Math.round((state.score / state.list.length) * 100);
+            saveHistory(state.lesson, finalScore);
+            alert(`考試結束！得分：${finalScore}`);
+        } else {
+            alert("練習完成！");
+        }
+        goHome();
+    }
+
+    function saveHistory(lesson, score) {
+        const history = JSON.parse(localStorage.getItem('vocab_history') || '[]');
+        history.push({ time: new Date().toLocaleString(), lesson: lesson, score: score });
+        localStorage.setItem('vocab_history', JSON.stringify(history));
+    }
+
+    function showHistory() {
+        const history = JSON.parse(localStorage.getItem('vocab_history') || '[]');
+        document.getElementById('history-list').innerHTML = history.reverse()
+            .map(h => `<tr><td>${h.time}</td><td>第 ${h.lesson} 課</td><td>${h.score}</td></tr>`).join('');
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('history-screen').classList.remove('hidden');
+    }
+
+    function goHome() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('history-screen').classList.add('hidden');
+        document.getElementById('error-screen').classList.add('hidden');
+        document.getElementById('menu-screen').classList.remove('hidden');
+        checkErrorMode(); // 重置按鈕狀態
+    }
+
+    // 鍵盤支援
+    document.getElementById('user-answer').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') checkAnswer();
+    });
+
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
